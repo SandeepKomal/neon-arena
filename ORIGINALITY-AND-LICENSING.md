@@ -24,7 +24,7 @@ No third-party fonts, icons, templates, or image libraries are intentionally bun
 
 ## Visual design provenance
 
-The rendered scene is composed entirely by the project's own code in `src/render.mjs`, `src/arena.mjs`, `src/geometry.mjs`, and `src/themes.mjs`. That includes the perspective camera, the lit terrain and slab with gradient materials, raised tiles and contact shadows, the neon-tube edges, the colour wave, the dot-matrix LED ticker and stadium board (text projected onto the slab in perspective), the streak light-cycle, the peak-day beacon, the floor grid, the nebula backdrop, the stats and legend cards, and the prism legend. All colour values are defined in `src/themes.mjs`. No external images, icon sets, fonts, SVG templates, or generated artwork are embedded. The font stack refers only to fonts already installed on the viewer's system.
+The rendered scene is composed entirely by the project's own code in `src/render.mjs`, `src/arena.mjs`, `src/neon.mjs`, `src/geometry.mjs`, and `src/themes.mjs`. That includes the perspective camera, the lit terrain and slab with gradient materials, raised tiles and contact shadows, the neon-tube edges, the colour wave, the dot-matrix LED ticker and stadium board (text projected onto the slab in perspective), the streak light-cycle, the peak-day beacon, the floor grid, the nebula backdrop, the stats and legend cards, and the prism legend. All colour values are defined in `src/themes.mjs`. No external images, icon sets, fonts, SVG templates, or generated artwork are embedded. The font stack refers only to fonts already installed on the viewer's system.
 
 ## Release review
 

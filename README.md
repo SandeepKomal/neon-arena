@@ -233,9 +233,10 @@ Options:
 | `src/cli.mjs` | Command-line entry point |
 | `src/github.mjs` | GitHub GraphQL data retrieval |
 | `src/stats.mjs` | Contribution statistics |
-| `src/geometry.mjs` | Perspective camera and prism geometry |
+| `src/geometry.mjs` | Perspective camera, prisms and box faces and edges |
 | `src/render.mjs` | Scene composition: terrain, materials, neon edges, cards |
 | `src/arena.mjs` | LED ticker, stadium board and streak light-cycle |
+| `src/neon.mjs` | Neon-tube edges and colour helpers |
 | `src/themes.mjs` | Theme colour tokens |
 | `src/sample.mjs` | Deterministic sample data |
 | `test/` | Unit and rendering tests |

@@ -97,15 +97,31 @@ test("a colour wave rolls across the grid in animated mode only", () => {
   }
 });
 
-test("the plate has glowing pink and green neon-tube edges in both themes", () => {
+test("the slab and the stadium board are solid boxes with joined neon-tube edges", () => {
   for (const theme of ["aurora", "daylight"]) {
     const t = themes[theme];
     const svg = renderSvg(sampleData(), { theme, animate: false });
+    const glowing = svg.split('<g filter="url(#neon)">').slice(1).map((g) => g.slice(0, g.indexOf("</g>"))).join("");
     for (const c of [t.edgeBack, t.edgeFront]) {
-      assert.match(svg, new RegExp(`stroke="${c}" stroke-width="2.6"[^>]*filter="url\\(#neon\\)"`), `${theme}: ${c} tube`);
+      assert.ok(glowing.includes(`stroke="${c}" stroke-width="2.6"`), `${theme}: ${c} tubes glow as one group`);
     }
+    // Edges running from the back of the slab to the front fade pink to green.
+    assert.match(svg, new RegExp(`id="slabEdge\\d+" gradientUnits="userSpaceOnUse"[^>]*><stop offset="0" stop-color="${t.edgeBack}"/><stop offset="1" stop-color="${t.edgeFront}"/>`), `${theme}: gradient side edges`);
+    assert.match(svg, /id="slableft"/, `${theme}: the slab's left end is drawn as a solid face`);
+    assert.match(svg, /id="boardEdge\d+"|<line [^>]*stroke="#ff10f0"/, `${theme}: the board is framed`);
   }
   assert.match(renderSvg(sampleData(), { theme: "daylight" }), /stroke="url\(#glassEdge\)" stroke-width="2" filter="url\(#neon\)"/, "day cards glow");
+});
+
+test("hidden box edges are not drawn", async () => {
+  const { makeProjector, boxEdges, boxFaces } = await import("../src/geometry.mjs");
+  const project = makeProjector({ yawDeg: -24, pitchDeg: 50, cx: 0, cy: 0, distance: 1500, zoom: 0.9 });
+  const box = { u0: -700, u1: 700, v0: -100, v1: 100, h0: -40, h1: 0 };
+  const faces = boxFaces(project, box).map((f) => f.key).sort();
+  assert.deepEqual(faces, ["front", "top"], "a centred camera sees only the top and front");
+  assert.equal(boxEdges(project, box).length, 7, "the bottom-back and hidden-end edges are skipped");
+  const shifted = makeProjector({ yawDeg: -24, pitchDeg: 50, cx: 0, cy: 0, distance: 1500, zoom: 0.9, shift: -480 });
+  assert.ok(boxFaces(shifted, box).some((f) => f.key === "left"), "a camera shifted left also sees the left end");
 });
 
 test("day and night themes share one neon palette", () => {
