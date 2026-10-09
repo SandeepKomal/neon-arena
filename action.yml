@@ -1,0 +1,64 @@
+name: Neon Arena
+author: Sandeep Komal Pothu
+description: Generate a 3D GitHub contribution visualization as a static SVG for profile READMEs.
+
+inputs:
+  username:
+    description: GitHub username to visualize. Defaults to the current repository owner.
+    required: false
+  github-token:
+    description: GitHub token used to read the contribution calendar and repository metadata.
+    required: true
+  theme:
+    description: Visualization theme.
+    required: false
+    default: aurora
+  output:
+    description: Output SVG path.
+    required: false
+    default: profile/neon-arena.svg
+  no-motion:
+    description: Disable SVG animation (ticker scroll, streak trail and colour wave).
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 24
+
+    - name: Generate Neon Arena
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        NEON_USERNAME: ${{ inputs.username }}
+        NEON_THEME: ${{ inputs.theme }}
+        NEON_OUTPUT: ${{ inputs.output }}
+        NEON_NO_MOTION: ${{ inputs.no-motion }}
+      run: |
+        set -euo pipefail
+
+        user="${NEON_USERNAME}"
+        if [[ -z "${user}" ]]; then
+          user="${GITHUB_REPOSITORY_OWNER}"
+        fi
+
+        args=(
+          "${GITHUB_ACTION_PATH}/src/cli.mjs"
+          --user "${user}"
+          --theme "${NEON_THEME}"
+          --out "${NEON_OUTPUT}"
+        )
+
+        if [[ "${NEON_NO_MOTION}" == "true" ]]; then
+          args+=(--no-motion)
+        fi
+
+        node "${args[@]}"
+
+branding:
+  icon: activity
+  color: purple

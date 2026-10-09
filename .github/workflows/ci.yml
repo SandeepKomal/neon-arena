@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@f548e57e544e1ff5a4c46bf1e1b8685f8e4a348a # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+
+      - name: Check source syntax
+        run: |
+          for file in src/*.mjs test/*.test.mjs; do
+            node --check "$file"
+          done
+
+      - name: Run test suite
+        run: npm test
+
+      - name: Generate sample previews
+        run: npm run sample
+
+      - name: Validate Action metadata
+        run: |
+          test -f action.yml
+          grep -q '^name:' action.yml
+          grep -q '^description:' action.yml
+          grep -q '^inputs:' action.yml
+          grep -q '^runs:' action.yml

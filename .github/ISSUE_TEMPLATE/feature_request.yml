@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest a product, renderer, Action, or workflow improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the user problem first, then the proposed improvement.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What would you like Neon Arena to make easier or better?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior or experience you would like.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Mention any existing approach or workaround.
+    validations:
+      required: false

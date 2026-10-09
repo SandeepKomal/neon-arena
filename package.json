@@ -1,0 +1,32 @@
+{
+  "name": "neon-arena",
+  "version": "1.0.0",
+  "description": "Generate a 3D neon stadium of your GitHub contributions as an animated SVG for profile READMEs.",
+  "type": "module",
+  "bin": {
+    "neon-arena": "./src/cli.mjs"
+  },
+  "scripts": {
+    "test": "node --test",
+    "sample": "node src/cli.mjs --sample --out out/preview-dark.svg && node src/cli.mjs --sample --theme daylight --out out/preview-light.svg"
+  },
+  "engines": {
+    "node": ">=18.3"
+  },
+  "license": "MIT",
+  "author": "Sandeep Komal Pothu",
+  "dependencies": {},
+  "repository": "https://github.com/SandeepKomal/neon-arena",
+  "homepage": "https://github.com/SandeepKomal/neon-arena",
+  "bugs": "https://github.com/SandeepKomal/neon-arena/issues",
+  "keywords": [
+    "github-action",
+    "github-profile",
+    "contributions",
+    "3d",
+    "svg",
+    "visualization",
+    "developer-profile",
+    "open-source"
+  ]
+}

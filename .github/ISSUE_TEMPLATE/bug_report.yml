@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a reproducible problem with Neon Arena
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please include enough detail to reproduce it.
+  - type: input
+    id: version
+    attributes:
+      label: Action version or commit
+      placeholder: "v0.1.0 or full SHA"
+    validations:
+      required: true
+  - type: input
+    id: theme
+    attributes:
+      label: Theme
+      placeholder: "aurora or daylight"
+    validations:
+      required: false
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and the expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include the workflow, command, or minimal steps needed to reproduce the issue.
+      render: yaml
+    validations:
+      required: true
