@@ -8,7 +8,11 @@
 // - Streak light-cycle: a neon trail rides over the bar tops across the
 //   longest streak, day by day, and ends in a tag.
 
+import { boxFaces, boxEdges } from "./geometry.mjs";
+import { adjust, tubes } from "./neon.mjs";
+
 const r1 = (n) => Math.round(n * 10) / 10;
+const pts = (list) => list.map((p) => `${r1(p.x)},${r1(p.y)}`).join(" ");
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]));
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -127,14 +131,22 @@ export function arena({ data, stats, t, project, animate, geo, tops }) {
     ["◆ ", t.mute], [`LONGEST STREAK ${stats.longest}D `, t.ramp[3]],
     ...(peak ? [["◆ ", t.mute], [`PEAK ${peak} · ${stats.max} `, t.peak]] : []),
   ];
-  const backH = 44;
+  // The board is a solid slab standing on the back strip of the plate: an LED
+  // screen on its front, a dark casing on its top and ends, neon tubes along
+  // every visible edge, and a soft shadow at its foot.
+  const backH = 44, backT = 8;
+  const boardBox = { u0: U0, u1: U1, v0: V0, v1: V0 + backT, h0: 0, h1: backH };
   const back = ledBoard({
-    id: "ledBack", project, u0: U0, length, v: V0, hTop: backH, height: backH,
+    id: "ledBack", project, u0: U0, length, v: V0 + backT, hTop: backH, height: backH,
     items: backItems, t, animate, speed: 38, direction: 1, fontSize: 24,
   });
-  // Neon frame lines along the back board's top edge.
-  const bt0 = project(U0, V0, backH), bt1 = project(U1, V0, backH);
-  const backFrame = `<line x1="${r1(bt0.x)}" y1="${r1(bt0.y)}" x2="${r1(bt1.x)}" y2="${r1(bt1.y)}" stroke="${t.edgeBack}" stroke-width="2" filter="url(#neon)"/>`;
+  const casing = boxFaces(project, boardBox)
+    .filter((f) => f.key !== "front")
+    .map((f) => `<polygon points="${pts(f.pts)}" fill="${adjust(t.boardBg, f.key === "top" ? 1.22 : 1.1)}"/><polygon points="${pts(f.pts)}" fill="url(#ledGloss)"/>`)
+    .join("");
+  const foot = [project(U0, V0 + backT, 0), project(U1, V0 + backT, 0), project(U1, V0 + backT + 6, 0), project(U0, V0 + backT + 6, 0)];
+  const footShadow = `<polygon points="${pts(foot)}" fill="${t.shadow}" opacity="${t.dark ? ".6" : ".22"}" filter="url(#aoBlur)"/>`;
+  const backFrame = tubes(boxEdges(project, boardBox), () => t.edgeBack, "boardEdge");
 
   // Streak light-cycle over the bar tops.
   const days = data.weeks.flat();
@@ -174,5 +186,5 @@ export function arena({ data, stats, t, project, animate, geo, tops }) {
   <linearGradient id="ledGloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".1"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
   <filter id="ledBloom" x="-5%" y="-40%" width="110%" height="180%"><feGaussianBlur stdDeviation="2.2"/></filter>`;
 
-  return { defs: defs + front.defs + back.defs, back: back.svg + backFrame, front: front.svg, trail };
+  return { defs: defs + front.defs + back.defs, back: footShadow + casing + back.svg + backFrame, front: front.svg, trail };
 }

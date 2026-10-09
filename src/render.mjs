@@ -1,5 +1,6 @@
 import { computeStats, levelByRank } from "./stats.mjs";
-import { makeProjector, prismFaces } from "./geometry.mjs";
+import { makeProjector, prismFaces, boxFaces, boxEdges } from "./geometry.mjs";
+import { adjust, mix, tubes } from "./neon.mjs";
 import { themes, FONT_STACK } from "./themes.mjs";
 import { arena } from "./arena.mjs";
 
@@ -13,7 +14,8 @@ const CELL = 22;
 const GAP = 3.4;
 const YAW = -24;
 const PITCH = 50;
-const CAMERA = 1500; // camera distance for perspective; the near end of the arena looms larger
+const CAMERA = 3000; // camera distance: real perspective, but long enough that tall bars stay upright
+const LENS_SHIFT = -280; // camera slid left, so the slab's left end shows as a solid face
 const PLATE_PAD = 14;
 const PLATE_DEPTH = 40; // world units below the ground plane; the front face is the LED ticker
 const MAX_BAR = 290; // world height of the busiest day
@@ -23,19 +25,6 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]));
 const r1 = (n) => Math.round(n * 10) / 10;
-
-function adjust(hex, k) {
-  const ch = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  const out = ch.map((v) => (k >= 1 ? v + (255 - v) * (k - 1) : v * k));
-  return "#" + out.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("");
-}
-
-// Linear blend between two #rrggbb colours.
-function mix(a, b, k) {
-  const ca = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
-  const cb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
-  return "#" + ca.map((v, i) => Math.round(v + (cb[i] - v) * k).toString(16).padStart(2, "0")).join("");
-}
 
 // Colour of the floor band at position f (0..1) through the year.
 function floorAt(stops, f) {
@@ -187,38 +176,25 @@ function terrain(data, stats, t, project, animate) {
   const corner = (u, v, h = 0) => project(u, v, h);
   const top = [corner(U0, V0), corner(U1, V0), corner(U1, V1), corner(U0, V1)];
   const bottom = [corner(U0, V0, -PLATE_DEPTH), corner(U1, V0, -PLATE_DEPTH), corner(U1, V1, -PLATE_DEPTH), corner(U0, V1, -PLATE_DEPTH)];
-  const sides = [
-    { n: [0, 1], i: [3, 2], shade: 1 },
-    { n: [-1, 0], i: [0, 3], shade: 0.8 },
-    { n: [1, 0], i: [2, 1], shade: 0.8 },
-    { n: [0, -1], i: [1, 0], shade: 1 },
-  ]
-    .filter((s) => project.faceVisible(s.n[0], s.n[1], s.n[0] > 0 ? U1 : U0, s.n[1] > 0 ? V1 : V0))
-    .map((s) => {
-      const a = top[s.i[0]], b = top[s.i[1]], c = bottom[s.i[1]];
-      const id = `slab${s.n.join("")}`.replace(/-/g, "m");
-      return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${r1(Math.min(a.y, b.y))}" x2="0" y2="${r1(Math.max(c.y, bottom[s.i[0]].y))}"><stop offset="0" stop-color="${adjust(t.plateSide, s.shade * (t.dark ? 1.9 : 1.02))}"/><stop offset="1" stop-color="${adjust(t.plateSide, s.shade * (t.dark ? 0.8 : 0.86))}"/></linearGradient>` +
-        poly([a, b, c, bottom[s.i[0]]], `url(#${id})`);
+  // The slab is a solid box in a dark casing, the same material as the LED
+  // screen on its front, so the screen and the end caps read as one block.
+  const slab = { u0: U0, u1: U1, v0: V0, v1: V1, h0: -PLATE_DEPTH, h1: 0 };
+  const sides = boxFaces(project, slab)
+    .filter((f) => f.key !== "top")
+    .map((f) => {
+      const id = `slab${f.key}`;
+      const lit = f.n[1] ? 1 : 0.75;
+      const y0 = Math.min(f.pts[0].y, f.pts[1].y), y1 = Math.max(f.pts[2].y, f.pts[3].y);
+      return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${r1(y0)}" x2="0" y2="${r1(y1)}"><stop offset="0" stop-color="${adjust(t.boardBg, 1 + 0.16 * lit)}"/><stop offset="1" stop-color="${adjust(t.boardBg, 0.8)}"/></linearGradient>` +
+        poly(f.pts, `url(#${id})`) + poly(f.pts, "url(#ledGloss)");
     })
     .join("");
 
   const shadow = `<polygon points="${pts(bottom.map((p) => ({ x: p.x + 6, y: p.y + 22 })))}" fill="${t.shadow}" opacity="${t.dark ? ".75" : ".2"}" filter="url(#soft)"/>`;
-  // Rim light along the two front edges catches the eye and separates plate from floor.
-  // Neon tube edges: a thick glowing core with a soft halo, pink along the
-  // back edges and green along the front edges.
-  const tube = (list, color) =>
-    `<polyline points="${pts(list)}" fill="none" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" filter="url(#neon)"/>` +
-    `<polyline points="${pts(list)}" fill="none" stroke="${mix(color, "#ffffff", 0.55)}" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round"/>`;
-  // Every visible edge of the slab is a tube: pink along the back, green along
-  // the front, plus the vertical corners and the bottom edge, so the box reads
-  // as a solid object.
-  const rim =
-    `<g opacity=".7">${tube([bottom[0], bottom[3], bottom[2]], t.edgeFront)}</g>` +
-    tube([top[0], bottom[0]], t.edgeBack) +
-    tube([top[3], bottom[3]], t.edgeFront) +
-    tube([top[2], bottom[2]], t.edgeFront) +
-    tube([top[3], top[0], top[1], top[2]], t.edgeBack) +
-    tube([top[0], top[3], top[2]], t.edgeFront);
+  // Every visible edge of the slab is a neon tube: pink along the back, green
+  // along the front, and the edges that run front to back fade from one to
+  // the other, so all the tubes meet cleanly at the corners.
+  const rim = tubes(boxEdges(project, slab), (p) => (p.v <= V0 ? t.edgeBack : t.edgeFront), "slabEdge");
   const plate =
     shadow +
     sides +
@@ -351,7 +327,7 @@ export function renderSvg(data, { theme = "aurora", animate = true } = {}) {
   if (!t) throw new Error(`Unknown theme "${theme}". Available: ${Object.keys(themes).join(", ")}`);
 
   const stats = computeStats(data.weeks);
-  const project = makeProjector({ yawDeg: YAW, pitchDeg: PITCH, cx: CX + 22, cy: CY - 18, distance: CAMERA, zoom: 0.9 });
+  const project = makeProjector({ yawDeg: YAW, pitchDeg: PITCH, cx: CX + 22, cy: CY - 18, distance: CAMERA, zoom: 0.9, shift: LENS_SHIFT });
   const { plate, rim, bars, months, peakTop, geo, tops, mats } = terrain(data, stats, t, project, animate);
   const stage = arena({ data, stats, t, project, animate, geo, tops });
   const label = `${data.name}: ${stats.total} contributions, longest streak ${stats.longest} days`;
