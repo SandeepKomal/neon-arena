@@ -136,7 +136,7 @@ test("the slab's front face is a scrolling LED ticker of top repos, mapped onto 
   const ticker = svg.slice(svg.indexOf('id="ledFrontText"'), svg.indexOf('id="ledBackText"'));
   for (const r of data.repos) assert.ok(ticker.includes(`>${r.name.toUpperCase()}<`), `${r.name} on the ticker`);
   assert.match(ticker, /attributeName="transform" type="translate"/, "the ticker scrolls");
-  assert.equal(svg.split('href="#ledFrontText"').length - 1, 16, "placed in 16 perspective-correct stretches");
+  assert.equal(svg.split('href="#ledFrontText"').length - 1, 1, "one exact mapping in the parallel view");
   assert.ok(!renderSvg(data, { animate: false }).includes('type="translate" values='), "static images do not scroll");
 });
 
@@ -176,16 +176,17 @@ test("LED screen text stays light on the dark screens in both themes", () => {
   }
 });
 
-test("both ends of the arena meet as the same clean corner, at nearly the same size", () => {
+test("the slab is a closed box: the left end is a face joined to the top and front, and both ends match", () => {
   const svg = renderSvg(sampleData(), { animate: false });
-  assert.ok(!/id="slab(left|right)"/.test(svg), "neither end face shows, so the two ends match");
-  // The slab's two vertical front corners are within a few percent of each other.
+  assert.match(svg, /id="slableft"/, "the left end shows as a face");
+  assert.ok(!/id="slabright"/.test(svg), "the right end faces away");
+  // In the parallel view the slab's two vertical front corners are the same length.
   const m = [...svg.matchAll(/<line x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)" stroke="#39ff14" stroke-width="2"/g)]
     .map((x) => x.slice(1).map(Number))
     .filter(([x1, y1, x2, y2]) => Math.abs(x1 - x2) < 0.3 * Math.abs(y1 - y2))
     .map(([x1, y1, x2, y2]) => Math.hypot(x2 - x1, y2 - y1));
   assert.ok(m.length >= 2, "two front corners");
-  assert.ok(Math.abs(m[0] - m[m.length - 1]) / Math.max(...m) < 0.06, `corner heights match: ${m.join(", ")}`);
+  assert.ok(Math.abs(m[0] - m[m.length - 1]) < 0.2, `corner heights match: ${m.join(", ")}`);
 });
 
 test("handles and repo names on the LED boards are escaped", () => {

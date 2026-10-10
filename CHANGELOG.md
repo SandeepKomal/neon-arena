@@ -6,7 +6,7 @@ All notable changes to Neon Arena are documented here.
 
 First release. Neon Arena turns a GitHub contribution calendar into a neon 3D stadium, drawn as a single self-contained SVG.
 
-- **Long-lens camera:** the arena is seen through a long-lens camera centred between the slab's two ends. Both ends meet as the same clean corner and are within a few percent of the same size, and bars stand nearly upright. Face and edge visibility are worked out from the camera position.
+- **Parallel 3D view:** the arena is drawn in a parallel (orthographic) view, like a technical drawing. Both ends of the slab are the same size, every edge stays parallel, bars stand upright, and the slab's left end shows as a closed face joined to the top and front. Face and edge visibility are worked out from the view direction.
 - **Solid boxes:** the slab and the stadium board are drawn as real boxes. Their sides are a dark casing that matches the LED screens, only the edges the camera can see are drawn, and every visible edge is a slim neon tube with a tight glow. Edges that run from back to front fade pink, purple, blue, green, so the colour stays vivid and the tubes join cleanly at every corner.
 - **Lit terrain:** every day with activity is a bar with gradient-lit sides and a specular top. Every empty day is a raised tile. Bars cast soft contact shadows.
 - **LED ticker:** the slab's front face is an LED screen, mapped onto the face in 3D. It scrolls your top repositories and their stars in crisp, solid letters with a soft bloom and a fine LED grid, so the names stay readable at the size GitHub shows the image.

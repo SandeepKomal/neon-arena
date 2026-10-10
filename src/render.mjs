@@ -12,15 +12,10 @@ const CX = 640;
 const CY = 452;
 const CELL = 22;
 const GAP = 3.4;
-const YAW = -13;
+const YAW = -22;
 const PITCH = 50;
-// A long-lens camera centred on the arena. It sits between the slab's two
-// ends (even for a 54-week year), so neither end face shows and both ends
-// meet as the same clean corner, and it is far enough back that the two ends
-// are within a few percent of the same size.
-const CAMERA = 3600;
 const PLATE_PAD = 14;
-const PLATE_DEPTH = 40; // world units below the ground plane; the front face is the LED ticker
+const PLATE_DEPTH = 48; // world units below the ground plane; the front face is the LED ticker
 const MAX_BAR = 290; // world height of the busiest day
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -331,7 +326,10 @@ export function renderSvg(data, { theme = "aurora", animate = true } = {}) {
   if (!t) throw new Error(`Unknown theme "${theme}". Available: ${Object.keys(themes).join(", ")}`);
 
   const stats = computeStats(data.weeks);
-  const project = makeProjector({ yawDeg: YAW, pitchDeg: PITCH, cx: CX + 22, cy: CY - 18, zoom: 0.9, distance: CAMERA });
+  // Parallel (orthographic) view, like a technical drawing: both ends of the
+  // slab are the same size, every edge stays parallel, and the slab's left end
+  // shows as a closed face joined to the top and front.
+  const project = makeProjector({ yawDeg: YAW, pitchDeg: PITCH, cx: CX + 22, cy: CY - 18, zoom: 0.9 });
   const { plate, rim, bars, months, peakTop, geo, tops, mats } = terrain(data, stats, t, project, animate);
   const stage = arena({ data, stats, t, project, animate, geo, tops });
   const label = `${data.name}: ${stats.total} contributions, longest streak ${stats.longest} days`;
