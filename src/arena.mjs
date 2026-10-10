@@ -144,15 +144,15 @@ export function arena({ data, stats, t, project, animate, geo, tops }) {
     ["◆ ", t.boardMute], [`LONGEST STREAK ${stats.longest}D `, t.ramp[3]],
     ...(peak ? [["◆ ", t.boardMute], [`PEAK ${peak} · ${stats.max} `, t.peak]] : []),
   ];
-  // The board is its own solid box standing on the floor just behind the
-  // slab, a little narrower than it, so the slab stays a clean box with all
-  // four top edges showing and the board's lower half hides behind it: an LED
-  // screen in a bezel on its front, a dark casing on its top and ends, and
-  // neon tubes on its visible edges.
-  const backH = 44, backT = 9, gap = 12, inset = 20;
-  const boardBox = { u0: U0 + inset, u1: U1 - inset, v0: V0 - gap - backT, v1: V0 - gap, h0: -depth, h1: backH };
+  // The board is its own solid box floating just above and behind the slab,
+  // a little narrower than it, like a hologram screen. The two boxes never
+  // touch, so each keeps a complete, closed outline and the slab's top keeps
+  // all four edges: an LED screen in a bezel on its front, a dark casing on
+  // its top and ends, and neon tubes on every visible edge.
+  const backH = 44, backT = 9, gap = 12, inset = 20, lift = 6;
+  const boardBox = { u0: U0 + inset, u1: U1 - inset, v0: V0 - gap - backT, v1: V0 - gap, h0: lift, h1: lift + backH };
   const back = ledBoard({
-    id: "ledBack", project, u0: boardBox.u0, length: boardBox.u1 - boardBox.u0, v: boardBox.v1, hTop: backH, height: backH,
+    id: "ledBack", project, u0: boardBox.u0, length: boardBox.u1 - boardBox.u0, v: boardBox.v1, hTop: boardBox.h1, height: backH,
     items: backItems, t, animate, speed: 38, direction: 1, fontSize: 24,
   });
   const casing = boxFaces(project, boardBox)
