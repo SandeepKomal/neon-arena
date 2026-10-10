@@ -45,6 +45,8 @@ export const themes = {
     streak: "#00fff0",
     // Bar tops get an outline in a tint of their own colour, like a neon tube.
     neonEdges: true,
+    // A soft neon glow on the floor under the slab.
+    underglow: 0.55,
     stars: true,
   },
   // Day: clean white with exactly the same neon palette as night mode: neon
@@ -84,6 +86,7 @@ export const themes = {
     streak: "#00c8e0",
     neonFrame: true,
     neonEdges: true,
+    underglow: 0.4,
     stars: false,
   },
 };
