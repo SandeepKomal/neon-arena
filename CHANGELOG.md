@@ -6,11 +6,11 @@ All notable changes to Neon Arena are documented here.
 
 First release. Neon Arena turns a GitHub contribution calendar into a neon 3D stadium, drawn as a single self-contained SVG.
 
-- **Perspective camera:** the arena is drawn in camera perspective, and the camera sits off to the left, so the slab's left end shows as a solid face as well as its front and top. Face and edge visibility are worked out from the camera position.
-- **Solid boxes:** the slab and the stadium board are drawn as real boxes. Their sides are a dark casing that matches the LED screens, only the edges the camera can see are drawn, and every visible edge is a neon tube. Edges that run from back to front fade from pink to green, so the tubes join cleanly at every corner.
+- **Parallel 3D view:** the arena is drawn in a parallel (orthographic) view, like a technical drawing. Both ends of the slab are the same size, every edge stays parallel, bars stand upright, and the slab's left end shows as a closed face joined to the top and front. Face and edge visibility are worked out from the view direction.
+- **Solid boxes:** the slab and the stadium board are drawn as real boxes. Their sides are a dark casing that matches the LED screens, only the edges the camera can see are drawn, and every visible edge is a slim neon tube with a tight glow. Edges that run from back to front fade pink, purple, blue, green, so the colour stays vivid and the tubes join cleanly at every corner.
 - **Lit terrain:** every day with activity is a bar with gradient-lit sides and a specular top. Every empty day is a raised tile. Bars cast soft contact shadows.
-- **LED ticker:** the slab's front face is a dot-matrix LED screen, projected onto the slab in true perspective. It scrolls your top repositories and their stars.
-- **Stadium board:** an LED board with real thickness stands along the back edge, casts a soft shadow at its foot and scrolls your headline stats: handle, contributions, active days, longest streak and peak day.
+- **LED ticker:** the slab's front face is an LED screen, mapped onto the face in 3D. It scrolls your top repositories and their stars in crisp, solid letters with a soft bloom and a fine LED grid, so the names stay readable at the size GitHub shows the image.
+- **Stadium board:** an LED board with real thickness stands flush on the back edge, so its ends rise straight off the slab's edge lines. It casts a soft shadow at its foot and scrolls your headline stats: handle, contributions, active days, longest streak and peak day.
 - **Streak light-cycle:** a neon trail rides over the bar tops across your longest streak and ends in an "N-DAY STREAK" tag.
 - **Neon box:** every visible slab edge is a glowing tube, pink at the back and green at the front. A colour wave rolls across the grid in animated mode.
 - **Two themes:** `aurora` (night) and `daylight` (clean white). Both use the same neon palette.

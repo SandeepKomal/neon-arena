@@ -18,35 +18,42 @@ export function mix(a, b, k) {
 
 // One neon tube between two projected points: a coloured core, which the
 // caller glows, and a bright centre line. When the two ends have different
-// colours the tube fades from one to the other, so edges that run from the
-// back of a box to its front join both colours seamlessly at the corners.
-function tube(p, q, ca, cb, id) {
+// colours the tube fades from one to the other through the `via` colours
+// (a straight pink-to-green blend turns grey in the middle), so edges that
+// run from the back of a box to its front join both colours at the corners.
+function tube(p, q, ca, cb, id, via = []) {
   const line = `x1="${r1(p.x)}" y1="${r1(p.y)}" x2="${r1(q.x)}" y2="${r1(q.y)}"`;
   const caps = `stroke-linecap="round"`;
   const white = (c) => mix(c, "#ffffff", 0.55);
   if (ca === cb) {
     return {
       defs: "",
-      core: `<line ${line} stroke="${ca}" stroke-width="2.6" ${caps}/>`,
-      centre: `<line ${line} stroke="${white(ca)}" stroke-width="0.9" ${caps}/>`,
+      core: `<line ${line} stroke="${ca}" stroke-width="2" ${caps}/>`,
+      centre: `<line ${line} stroke="${white(ca)}" stroke-width=".7" ${caps}/>`,
     };
   }
-  const grad = (gid, a, b) =>
-    `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" ${line}><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient>`;
+  const stops = [ca, ...via, cb];
+  const grad = (gid, cols) =>
+    `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" ${line}>` +
+    cols.map((c, i) => `<stop offset="${Math.round((i / (cols.length - 1)) * 100) / 100}" stop-color="${c}"/>`).join("") +
+    `</linearGradient>`;
   return {
-    defs: grad(id, ca, cb) + grad(`${id}w`, white(ca), white(cb)),
-    core: `<line ${line} stroke="url(#${id})" stroke-width="2.6" ${caps}/>`,
-    centre: `<line ${line} stroke="url(#${id}w)" stroke-width="0.9" ${caps}/>`,
+    defs: grad(id, stops) + grad(`${id}w`, stops.map(white)),
+    core: `<line ${line} stroke="url(#${id})" stroke-width="2" ${caps}/>`,
+    centre: `<line ${line} stroke="url(#${id}w)" stroke-width=".7" ${caps}/>`,
   };
 }
 
 // Tubes along a set of box edges. `colourAt(point)` picks the colour at a
 // world position, so each end of an edge takes the colour of where it sits.
-// The glow is one filter over the whole group: a filter on a single
-// near-vertical line would be clipped to its hairline bounding box.
-export function tubes(edges, colourAt, idPrefix) {
-  const parts = edges.map((e, i) => tube(e.p, e.q, colourAt(e.a), colourAt(e.b), `${idPrefix}${i}`));
+// The glow is one tight filter over the whole group, so neighbouring tubes
+// stay crisp and separate (and a filter on a single vertical line would be
+// clipped to its hairline bounding box).
+// `via` lists the in-between colours from the back (low v) to the front.
+export function tubes(edges, colourAt, idPrefix, via = []) {
+  const parts = edges.map((e, i) =>
+    tube(e.p, e.q, colourAt(e.a), colourAt(e.b), `${idPrefix}${i}`, e.a.v <= e.b.v ? via : [...via].reverse()));
   return parts.map((t) => t.defs).join("") +
-    `<g filter="url(#neon)">${parts.map((t) => t.core).join("")}</g>` +
+    `<g filter="url(#tubeGlow)">${parts.map((t) => t.core).join("")}</g>` +
     parts.map((t) => t.centre).join("");
 }

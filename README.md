@@ -9,7 +9,7 @@
   <img alt="Neon Arena: a neon 3D stadium of a year of GitHub contributions, with an LED ticker of top repositories, a stadium board of stats and a light trail along the longest streak" src="./preview-dark.svg">
 </picture>
 
-Neon Arena turns your GitHub contribution calendar into a single animated SVG for your profile README. Every day is a lit 3D bar or tile on a slab, drawn in true camera perspective, and the slab is framed in glowing neon tubes.
+Neon Arena turns your GitHub contribution calendar into a single animated SVG for your profile README. Every day is a lit 3D bar or tile on a solid slab, drawn in a clean parallel 3D view, and every edge of the slab is a glowing neon tube.
 
 - **LED ticker:** the slab's front face is a dot-matrix screen that scrolls your top repositories and their stars.
 - **Stadium board:** an LED board along the back scrolls your headline stats: contributions, active days, longest streak and peak day.
@@ -233,7 +233,7 @@ Options:
 | `src/cli.mjs` | Command-line entry point |
 | `src/github.mjs` | GitHub GraphQL data retrieval |
 | `src/stats.mjs` | Contribution statistics |
-| `src/geometry.mjs` | Perspective camera, prisms and box faces and edges |
+| `src/geometry.mjs` | 3D camera, prisms and box faces and edges |
 | `src/render.mjs` | Scene composition: terrain, materials, neon edges, cards |
 | `src/arena.mjs` | LED ticker, stadium board and streak light-cycle |
 | `src/neon.mjs` | Neon-tube edges and colour helpers |
