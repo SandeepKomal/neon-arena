@@ -3,8 +3,8 @@
 // - Front LED ticker: the slab's front face is a dot-matrix screen. Text is
 //   drawn in the face's own plane through an affine matrix, so it sits on the
 //   slab in true 3D, and scrolls the top repositories.
-// - Back stadium board: an LED board stands along the back edge, behind the
-//   bars, and scrolls the headline stats.
+// - Back stadium board: an LED board stands just behind the slab, behind
+//   the bars, and scrolls the headline stats.
 // - Streak light-cycle: a neon trail rides over the bar tops across the
 //   longest streak, day by day, and ends in a tag.
 
@@ -32,7 +32,7 @@ function stretchMatrix(project, u, v, hTop, len, height) {
 // One scrolling LED board. `items` are [text, colour] pairs; the run repeats
 // so the scroll loops seamlessly. The text is defined once and placed into
 // each stretch with <use>, so splitting the board costs almost nothing.
-function ledBoard({ id, project, u0, length, v, hTop, height, items, t, animate, speed, direction, fontSize }) {
+function ledBoard({ id, project, u0, length, v, hTop, height, items, t, animate, speed, direction, fontSize, padX = 12, padY = 6 }) {
   const charW = fontSize * 0.62 + 2;
   const run = items.map(([s]) => s).join("").length;
   const runW = run * charW;
@@ -53,19 +53,29 @@ function ledBoard({ id, project, u0, length, v, hTop, height, items, t, animate,
   // laid over the screen rather than a dot mask that breaks the letters up.
   const defs = `<g id="${id}Text"><g>${scroll}<g filter="url(#ledBloom)" opacity=".55">${text}</g>${text}</g></g>`;
 
-  // Panel: the true projected outline, then the text in short stretches.
-  const corners = [project(u0, v, hTop), project(u0 + length, v, hTop), project(u0 + length, v, hTop - height), project(u0, v, hTop - height)];
-  const outline = corners.map((q) => `${r1(q.x)},${r1(q.y)}`).join(" ");
+  // Panel: the face is a dark bezel, and the screen sits inset inside it like
+  // a display in its frame, so text never runs into the box's edges. The text
+  // is placed in short stretches when the camera has perspective.
+  const quad = (a, b, top, bottom) =>
+    [project(u0 + a, v, hTop - top), project(u0 + b, v, hTop - top), project(u0 + b, v, hTop - bottom), project(u0 + a, v, hTop - bottom)]
+      .map((q) => `${r1(q.x)},${r1(q.y)}`).join(" ");
+  const outline = quad(0, length, 0, height);
+  const screen = quad(padX, length - padX, padY, height - padY);
   const parts = project.perspective ? 16 : 1, seg = length / parts;
   let stretches = "";
   for (let k = 0; k < parts; k++) {
     const x0 = k * seg;
-    stretches += `<clipPath id="${id}C${k}"><rect x="${r1(x0 - 0.4)}" width="${r1(seg + 0.8)}" height="${r1(height)}"/></clipPath>` +
-      `<g transform="${stretchMatrix(project, u0 + x0, v, hTop, seg, height)} translate(${r1(-x0)} 0)" clip-path="url(#${id}C${k})"><use href="#${id}Text"/><rect x="${r1(x0 - 0.4)}" width="${r1(seg + 0.8)}" height="${r1(height)}" fill="url(#ledGrid)"/></g>`;
+    const a = Math.max(x0, padX), b = Math.min(x0 + seg, length - padX);
+    if (b <= a) continue;
+    // Neighbouring stretches overlap a hair so no seam shows between them.
+    const lo = a > padX ? a - 0.4 : a, hi = b < length - padX ? b + 0.4 : b;
+    const clip = `x="${r1(lo)}" y="${r1(padY)}" width="${r1(hi - lo)}" height="${r1(height - 2 * padY)}"`;
+    stretches += `<clipPath id="${id}C${k}"><rect ${clip}/></clipPath>` +
+      `<g transform="${stretchMatrix(project, u0 + x0, v, hTop, seg, height)} translate(${r1(-x0)} 0)" clip-path="url(#${id}C${k})"><use href="#${id}Text"/><rect ${clip} fill="url(#ledGrid)"/></g>`;
   }
   return {
     defs,
-    svg: `<polygon points="${outline}" fill="${t.boardBg}"/>${stretches}<polygon points="${outline}" fill="url(#ledGloss)"/>`,
+    svg: `<polygon points="${outline}" fill="${adjust(t.boardBg, 1.16)}"/><polygon points="${screen}" fill="${t.boardBg}" stroke="${adjust(t.boardBg, 1.45)}" stroke-width=".6"/>${stretches}<polygon points="${outline}" fill="url(#ledGloss)"/>`,
   };
 }
 
@@ -134,13 +144,13 @@ export function arena({ data, stats, t, project, animate, geo, tops }) {
     ["◆ ", t.boardMute], [`LONGEST STREAK ${stats.longest}D `, t.ramp[3]],
     ...(peak ? [["◆ ", t.boardMute], [`PEAK ${peak} · ${stats.max} `, t.peak]] : []),
   ];
-  // The board is a solid box standing flush on the back strip of the plate,
-  // so its ends rise straight up from the plate's edge lines: an LED screen on
-  // its front, a dark casing on its top and ends, neon tubes on its visible
-  // edges, and a soft shadow at its foot. Its bottom edges along the plate's
-  // own edges are left out, so no tube is drawn twice.
-  const backH = 44, backT = 9;
-  const boardBox = { u0: U0, u1: U1, v0: V0, v1: V0 + backT, h0: 0, h1: backH };
+  // The board is its own solid box standing on the floor just behind the
+  // slab, a little narrower than it, so the slab stays a clean box with all
+  // four top edges showing and the board's lower half hides behind it: an LED
+  // screen in a bezel on its front, a dark casing on its top and ends, and
+  // neon tubes on its visible edges.
+  const backH = 44, backT = 9, gap = 12, inset = 20;
+  const boardBox = { u0: U0 + inset, u1: U1 - inset, v0: V0 - gap - backT, v1: V0 - gap, h0: -depth, h1: backH };
   const back = ledBoard({
     id: "ledBack", project, u0: boardBox.u0, length: boardBox.u1 - boardBox.u0, v: boardBox.v1, hTop: backH, height: backH,
     items: backItems, t, animate, speed: 38, direction: 1, fontSize: 24,
@@ -149,11 +159,7 @@ export function arena({ data, stats, t, project, animate, geo, tops }) {
     .filter((f) => f.key !== "front")
     .map((f) => `<polygon points="${pts(f.pts)}" fill="${adjust(t.boardBg, f.key === "top" ? 1.22 : 1.1)}"/><polygon points="${pts(f.pts)}" fill="url(#ledGloss)"/>`)
     .join("");
-  const fv = boardBox.v1;
-  const foot = [project(boardBox.u0, fv, 0), project(boardBox.u1, fv, 0), project(boardBox.u1, fv + 3, 0), project(boardBox.u0, fv + 3, 0)];
-  const footShadow = `<polygon points="${pts(foot)}" fill="${t.shadow}" opacity="${t.dark ? ".6" : ".22"}" filter="url(#aoBlur)"/>`;
-  const onPlateEdge = (e) => e.a.h === 0 && e.b.h === 0 && !(e.a.v === boardBox.v1 && e.b.v === boardBox.v1);
-  const backFrame = tubes(boxEdges(project, boardBox).filter((e) => !onPlateEdge(e)), () => t.edgeBack, "boardEdge");
+  const backFrame = tubes(boxEdges(project, boardBox), () => t.edgeBack, "boardEdge");
 
   // Streak light-cycle over the bar tops.
   const days = data.weeks.flat();
@@ -193,5 +199,5 @@ export function arena({ data, stats, t, project, animate, geo, tops }) {
   <linearGradient id="ledGloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".1"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
   <filter id="ledBloom" x="-5%" y="-40%" width="110%" height="180%"><feGaussianBlur stdDeviation="1.5"/></filter>`;
 
-  return { defs: defs + front.defs + back.defs, back: footShadow + casing + back.svg + backFrame, front: front.svg, trail };
+  return { defs: defs + front.defs + back.defs, back: casing + back.svg + backFrame, front: front.svg, trail };
 }

@@ -189,6 +189,20 @@ test("the slab is a closed box: the left end is a face joined to the top and fro
   assert.ok(Math.abs(m[0] - m[m.length - 1]) < 0.2, `corner heights match: ${m.join(", ")}`);
 });
 
+test("screens sit inset in a bezel, so text never reaches a box edge", () => {
+  const svg = renderSvg(sampleData(), { animate: false });
+  for (const id of ["ledFront", "ledBack"]) {
+    const clip = svg.match(new RegExp(`<clipPath id="${id}C0"><rect x="([\\d.]+)" y="([\\d.]+)"`));
+    assert.ok(clip && Number(clip[1]) > 0 && Number(clip[2]) > 0, `${id}: text is clipped inside the bezel`);
+  }
+});
+
+test("the stadium board stands behind the slab, so the slab's top keeps all four edges", () => {
+  const svg = renderSvg(sampleData(), { animate: false });
+  assert.ok(svg.indexOf('href="#ledBackText"') < svg.indexOf('fill="url(#plateFill)"'), "the board is drawn before the slab");
+  assert.ok(svg.indexOf('href="#ledFrontText"') > svg.indexOf('fill="url(#plateFill)"'), "the front screen is drawn on the slab");
+});
+
 test("handles and repo names on the LED boards are escaped", () => {
   const data = sampleData();
   data.login = `x"><script>alert(1)</script>`;

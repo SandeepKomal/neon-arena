@@ -365,10 +365,10 @@ ${nebula()}
 ${t.stars ? stars(animate) : ""}
 ${floorGrid(data, project, t)}
 <ellipse cx="${CX}" cy="${CY}" rx="660" ry="280" fill="url(#floorGlow)"/>
+${stage.back}
 ${plate}
 ${stage.front}
 ${rim}
-${stage.back}
 ${bars}
 ${stage.trail}
 ${months}
