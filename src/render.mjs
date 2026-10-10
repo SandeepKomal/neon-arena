@@ -12,10 +12,13 @@ const CX = 640;
 const CY = 452;
 const CELL = 22;
 const GAP = 3.4;
-const YAW = -24;
+const YAW = -13;
 const PITCH = 50;
-const CAMERA = 3000; // camera distance: real perspective, but long enough that tall bars stay upright
-const LENS_SHIFT = -280; // camera slid left, so the slab's left end shows as a solid face
+// A long-lens camera centred on the arena. It sits between the slab's two
+// ends (even for a 54-week year), so neither end face shows and both ends
+// meet as the same clean corner, and it is far enough back that the two ends
+// are within a few percent of the same size.
+const CAMERA = 3600;
 const PLATE_PAD = 14;
 const PLATE_DEPTH = 40; // world units below the ground plane; the front face is the LED ticker
 const MAX_BAR = 290; // world height of the busiest day
@@ -193,8 +196,9 @@ function terrain(data, stats, t, project, animate) {
   const shadow = `<polygon points="${pts(bottom.map((p) => ({ x: p.x + 6, y: p.y + 22 })))}" fill="${t.shadow}" opacity="${t.dark ? ".75" : ".2"}" filter="url(#soft)"/>`;
   // Every visible edge of the slab is a neon tube: pink along the back, green
   // along the front, and the edges that run front to back fade from one to
-  // the other, so all the tubes meet cleanly at the corners.
-  const rim = tubes(boxEdges(project, slab), (p) => (p.v <= V0 ? t.edgeBack : t.edgeFront), "slabEdge");
+  // the other through neon purple and blue, so all the tubes meet cleanly at
+  // the corners and stay vivid along their length.
+  const rim = tubes(boxEdges(project, slab), (p) => (p.v <= V0 ? t.edgeBack : t.edgeFront), "slabEdge", [t.ramp[3], t.ramp[1]]);
   const plate =
     shadow +
     sides +
@@ -327,7 +331,7 @@ export function renderSvg(data, { theme = "aurora", animate = true } = {}) {
   if (!t) throw new Error(`Unknown theme "${theme}". Available: ${Object.keys(themes).join(", ")}`);
 
   const stats = computeStats(data.weeks);
-  const project = makeProjector({ yawDeg: YAW, pitchDeg: PITCH, cx: CX + 22, cy: CY - 18, distance: CAMERA, zoom: 0.9, shift: LENS_SHIFT });
+  const project = makeProjector({ yawDeg: YAW, pitchDeg: PITCH, cx: CX + 22, cy: CY - 18, zoom: 0.9, distance: CAMERA });
   const { plate, rim, bars, months, peakTop, geo, tops, mats } = terrain(data, stats, t, project, animate);
   const stage = arena({ data, stats, t, project, animate, geo, tops });
   const label = `${data.name}: ${stats.total} contributions, longest streak ${stats.longest} days`;
@@ -354,6 +358,7 @@ export function renderSvg(data, { theme = "aurora", animate = true } = {}) {
   <filter id="aoBlur" x="-5%" y="-20%" width="110%" height="140%"><feGaussianBlur stdDeviation="2.4"/></filter>
   <radialGradient id="floorGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${t.glow}" stop-opacity="${t.dark ? 0.25 : 0.06}"/><stop offset="1" stop-color="${t.glow}" stop-opacity="0"/></radialGradient>
   <filter id="neon" x="-10%" y="-10%" width="120%" height="120%" filterUnits="objectBoundingBox"><feGaussianBlur in="SourceGraphic" stdDeviation="2.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <filter id="tubeGlow" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   <filter id="soft" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="12"/></filter>
 </defs>

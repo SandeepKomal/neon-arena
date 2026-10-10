@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { renderSvg } from "../src/render.mjs";
 import { sampleData } from "../src/sample.mjs";
 import { themes } from "../src/themes.mjs";
+import { mix } from "../src/neon.mjs";
 
 for (const theme of Object.keys(themes)) {
   test(`renders a clean SVG for theme ${theme}`, () => {
@@ -101,13 +102,12 @@ test("the slab and the stadium board are solid boxes with joined neon-tube edges
   for (const theme of ["aurora", "daylight"]) {
     const t = themes[theme];
     const svg = renderSvg(sampleData(), { theme, animate: false });
-    const glowing = svg.split('<g filter="url(#neon)">').slice(1).map((g) => g.slice(0, g.indexOf("</g>"))).join("");
+    const glowing = svg.split('<g filter="url(#tubeGlow)">').slice(1).map((g) => g.slice(0, g.indexOf("</g>"))).join("");
     for (const c of [t.edgeBack, t.edgeFront]) {
-      assert.ok(glowing.includes(`stroke="${c}" stroke-width="2.6"`), `${theme}: ${c} tubes glow as one group`);
+      assert.ok(glowing.includes(`stroke="${c}" stroke-width="2"`), `${theme}: ${c} tubes glow as one group`);
     }
     // Edges running from the back of the slab to the front fade pink to green.
-    assert.match(svg, new RegExp(`id="slabEdge\\d+" gradientUnits="userSpaceOnUse"[^>]*><stop offset="0" stop-color="${t.edgeBack}"/><stop offset="1" stop-color="${t.edgeFront}"/>`), `${theme}: gradient side edges`);
-    assert.match(svg, /id="slableft"/, `${theme}: the slab's left end is drawn as a solid face`);
+    assert.match(svg, new RegExp(`id="slabEdge\\d+" gradientUnits="userSpaceOnUse"[^>]*><stop offset="0" stop-color="${t.edgeBack}"/><stop offset="0.33" stop-color="${t.ramp[3]}"/><stop offset="0.67" stop-color="${t.ramp[1]}"/><stop offset="1" stop-color="${t.edgeFront}"/>`), `${theme}: side edges fade pink, purple, blue, green`);
     assert.match(svg, /id="boardEdge\d+"|<line [^>]*stroke="#ff10f0"/, `${theme}: the board is framed`);
   }
   assert.match(renderSvg(sampleData(), { theme: "daylight" }), /stroke="url\(#glassEdge\)" stroke-width="2" filter="url\(#neon\)"/, "day cards glow");
@@ -127,13 +127,13 @@ test("hidden box edges are not drawn", async () => {
 test("day and night themes share one neon palette", () => {
   const { aurora: a, daylight: d } = themes;
   assert.deepEqual(d.ramp.slice(1), a.ramp.slice(1), "activity levels");
-  for (const k of ["peak", "accents", "wave", "edgeBack", "edgeFront", "glow"]) assert.deepEqual(d[k], a[k], k);
+  for (const k of ["peak", "accents", "wave", "edgeBack", "edgeFront", "glow", "boardInk", "boardMute"]) assert.deepEqual(d[k], a[k], k);
 });
 
-test("the slab's front face is a scrolling LED ticker of top repos, in perspective", () => {
+test("the slab's front face is a scrolling LED ticker of top repos, mapped onto the face", () => {
   const data = sampleData();
   const svg = renderSvg(data, { animate: true });
-  const ticker = svg.slice(svg.indexOf('id="ledFrontText"'), svg.indexOf('id="ledBackDots"'));
+  const ticker = svg.slice(svg.indexOf('id="ledFrontText"'), svg.indexOf('id="ledBackText"'));
   for (const r of data.repos) assert.ok(ticker.includes(`>${r.name.toUpperCase()}<`), `${r.name} on the ticker`);
   assert.match(ticker, /attributeName="transform" type="translate"/, "the ticker scrolls");
   assert.equal(svg.split('href="#ledFrontText"').length - 1, 16, "placed in 16 perspective-correct stretches");
@@ -163,6 +163,29 @@ test("bars and tiles are lit with gradient materials and cast contact shadows", 
   assert.match(svg, /<linearGradient id="mtop[0-9a-f]{6}\d+"/, "top material");
   assert.match(svg, /filter="url\(#aoBlur\)"/, "contact shadows");
   assert.ok(!/id="(m(side|top)[^"]+)"[\s\S]*id="\1"/.test(svg), "each material is defined once");
+});
+
+test("LED screen text stays light on the dark screens in both themes", () => {
+  for (const theme of ["aurora", "daylight"]) {
+    const t = themes[theme];
+    const svg = renderSvg(sampleData(), { theme, animate: false });
+    const front = svg.slice(svg.indexOf('id="ledFrontText"'), svg.indexOf('id="ledBackText"'));
+    assert.ok(front.includes(`fill="${mix(t.boardInk, "#ffffff", 0.18)}"`), `${theme}: plain screen text uses the light board ink`);
+    if (t.ink !== t.boardInk) assert.ok(!front.includes(`fill="${mix(t.ink, "#ffffff", 0.18)}"`), `${theme}: no page-ink text on the screen`);
+    assert.ok(!/<mask id="led/.test(svg), `${theme}: letters are solid, not dot-masked`);
+  }
+});
+
+test("both ends of the arena meet as the same clean corner, at nearly the same size", () => {
+  const svg = renderSvg(sampleData(), { animate: false });
+  assert.ok(!/id="slab(left|right)"/.test(svg), "neither end face shows, so the two ends match");
+  // The slab's two vertical front corners are within a few percent of each other.
+  const m = [...svg.matchAll(/<line x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)" stroke="#39ff14" stroke-width="2"/g)]
+    .map((x) => x.slice(1).map(Number))
+    .filter(([x1, y1, x2, y2]) => Math.abs(x1 - x2) < 0.3 * Math.abs(y1 - y2))
+    .map(([x1, y1, x2, y2]) => Math.hypot(x2 - x1, y2 - y1));
+  assert.ok(m.length >= 2, "two front corners");
+  assert.ok(Math.abs(m[0] - m[m.length - 1]) / Math.max(...m) < 0.06, `corner heights match: ${m.join(", ")}`);
 });
 
 test("handles and repo names on the LED boards are escaped", () => {

@@ -37,6 +37,7 @@ export function makeProjector({ yawDeg, pitchDeg, cx, cy, distance = 0, zoom = 1
   // from below (nh = -1).
   const camH = distance ? distance * sinPitch : Infinity;
   project.capVisible = (nh, h) => (nh > 0 ? camH > h : camH < h);
+  project.perspective = Boolean(distance);
   return project;
 }
 

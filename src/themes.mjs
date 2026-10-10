@@ -38,6 +38,10 @@ export const themes = {
     edgeFront: "#39ff14",
     // Neon Arena: LED board panels and the streak light-cycle.
     boardBg: "#05040d",
+    // The LED screens are dark in both themes, so their plain text and
+    // separators have their own light colours.
+    boardInk: "#f2f4ff",
+    boardMute: "#9da3cc",
     streak: "#00fff0",
     // Bar tops get an outline in a tint of their own colour, like a neon tube.
     neonEdges: true,
@@ -75,6 +79,8 @@ export const themes = {
     edgeBack: "#ff10f0",
     edgeFront: "#39ff14",
     boardBg: "#0d0b1f",
+    boardInk: "#f2f4ff",
+    boardMute: "#9da3cc",
     streak: "#00c8e0",
     neonFrame: true,
     neonEdges: true,
