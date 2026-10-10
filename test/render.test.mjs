@@ -98,7 +98,7 @@ test("a colour wave rolls across the grid in animated mode only", () => {
   }
 });
 
-test("the slab and the stadium board are solid boxes with joined neon-tube edges", () => {
+test("one unbroken neon loop runs round the slab's top, with an underglow below, in both themes", () => {
   for (const theme of ["aurora", "daylight"]) {
     const t = themes[theme];
     const svg = renderSvg(sampleData(), { theme, animate: false });
@@ -108,7 +108,10 @@ test("the slab and the stadium board are solid boxes with joined neon-tube edges
     }
     // Edges running from the back of the slab to the front fade pink to green.
     assert.match(svg, new RegExp(`id="slabEdge\\d+" gradientUnits="userSpaceOnUse"[^>]*><stop offset="0" stop-color="${t.edgeBack}"/><stop offset="0.33" stop-color="${t.ramp[3]}"/><stop offset="0.67" stop-color="${t.ramp[1]}"/><stop offset="1" stop-color="${t.edgeFront}"/>`), `${theme}: side edges fade pink, purple, blue, green`);
-    assert.match(svg, /id="boardEdge\d+"|<line [^>]*stroke="#ff10f0"/, `${theme}: the board is framed`);
+    const loop = glowing.match(/<line /g) || [];
+    assert.equal(loop.length, 4, `${theme}: the loop is the four top edges only`);
+    assert.match(svg, new RegExp(`fill="url\\(#underglow\\)" opacity="${t.underglow}"`), `${theme}: neon underglow below the slab`);
+    assert.ok(!svg.includes("ledBack"), `${theme}: no board behind the slab`);
   }
   assert.match(renderSvg(sampleData(), { theme: "daylight" }), /stroke="url\(#glassEdge\)" stroke-width="2" filter="url\(#neon\)"/, "day cards glow");
 });
@@ -133,19 +136,11 @@ test("day and night themes share one neon palette", () => {
 test("the slab's front face is a scrolling LED ticker of top repos, mapped onto the face", () => {
   const data = sampleData();
   const svg = renderSvg(data, { animate: true });
-  const ticker = svg.slice(svg.indexOf('id="ledFrontText"'), svg.indexOf('id="ledBackText"'));
+  const ticker = svg.slice(svg.indexOf('id="ledFrontText"'), svg.indexOf("</defs>"));
   for (const r of data.repos) assert.ok(ticker.includes(`>${r.name.toUpperCase()}<`), `${r.name} on the ticker`);
   assert.match(ticker, /attributeName="transform" type="translate"/, "the ticker scrolls");
-  assert.equal(svg.split('href="#ledFrontText"').length - 1, 1, "one exact mapping in the parallel view");
+  assert.equal(svg.split('href="#ledFrontText"').length - 1, 2, "one exact mapping per face: the left end and the front");
   assert.ok(!renderSvg(data, { animate: false }).includes('type="translate" values='), "static images do not scroll");
-});
-
-test("the stadium board shows the headline stats behind the bars", () => {
-  const svg = renderSvg(sampleData(), { animate: false });
-  const board = svg.slice(svg.indexOf('id="ledBackText"'));
-  assert.match(board, /1,126 CONTRIBUTIONS/);
-  assert.match(board, /LONGEST STREAK 10D/);
-  assert.ok(svg.indexOf('href="#ledBackText"') < svg.indexOf('fill="url(#mside'), "board is drawn before the bars");
 });
 
 test("a light-cycle trail rides the longest streak and is tagged with its length", () => {
@@ -169,24 +164,43 @@ test("LED screen text stays light on the dark screens in both themes", () => {
   for (const theme of ["aurora", "daylight"]) {
     const t = themes[theme];
     const svg = renderSvg(sampleData(), { theme, animate: false });
-    const front = svg.slice(svg.indexOf('id="ledFrontText"'), svg.indexOf('id="ledBackText"'));
+    const front = svg.slice(svg.indexOf('id="ledFrontText"'), svg.indexOf("</defs>"));
     assert.ok(front.includes(`fill="${mix(t.boardInk, "#ffffff", 0.18)}"`), `${theme}: plain screen text uses the light board ink`);
     if (t.ink !== t.boardInk) assert.ok(!front.includes(`fill="${mix(t.ink, "#ffffff", 0.18)}"`), `${theme}: no page-ink text on the screen`);
     assert.ok(!/<mask id="led/.test(svg), `${theme}: letters are solid, not dot-masked`);
   }
 });
 
-test("the slab is a closed box: the left end is a face joined to the top and front, and both ends match", () => {
+test("the slab is a closed box: the left end shows as a face, and both ends are the same size", () => {
   const svg = renderSvg(sampleData(), { animate: false });
   assert.match(svg, /id="slableft"/, "the left end shows as a face");
   assert.ok(!/id="slabright"/.test(svg), "the right end faces away");
-  // In the parallel view the slab's two vertical front corners are the same length.
-  const m = [...svg.matchAll(/<line x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)" stroke="#39ff14" stroke-width="2"/g)]
+  // In the parallel view the loop's two short ends are the same length.
+  const ends = [...svg.matchAll(/<line x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)" stroke="url\(#slabEdge\d+\)" stroke-width="2"/g)]
     .map((x) => x.slice(1).map(Number))
-    .filter(([x1, y1, x2, y2]) => Math.abs(x1 - x2) < 0.3 * Math.abs(y1 - y2))
     .map(([x1, y1, x2, y2]) => Math.hypot(x2 - x1, y2 - y1));
-  assert.ok(m.length >= 2, "two front corners");
-  assert.ok(Math.abs(m[0] - m[m.length - 1]) < 0.2, `corner heights match: ${m.join(", ")}`);
+  assert.equal(ends.length, 2, "two short ends");
+  assert.ok(Math.abs(ends[0] - ends[1]) < 0.2, `end lengths match: ${ends.join(", ")}`);
+});
+
+test("screens sit inset in a bezel, so text never reaches a box edge", () => {
+  const svg = renderSvg(sampleData(), { animate: false });
+  for (const id of ["ledFront"]) {
+    const clip = svg.match(new RegExp(`<clipPath id="${id}C0_0"><rect x="([\\d.]+)" y="([\\d.]+)"`));
+    assert.ok(clip && Number(clip[1]) > 0 && Number(clip[2]) > 0, `${id}: text is clipped inside the bezel`);
+  }
+});
+
+test("the front ticker wraps round the left corner as one ribbon", () => {
+  const svg = renderSvg(sampleData(), { animate: false });
+  const clips = [...svg.matchAll(/<clipPath id="ledFrontC(\d)_0"><rect x="([\d.]+)" y="[\d.]+" width="([\d.]+)"/g)].map((m) => [Number(m[2]), Number(m[2]) + Number(m[3])]);
+  assert.equal(clips.length, 2, "the left end face and the front face");
+  assert.ok(clips[1][0] <= clips[0][1], "the front screen starts where the end screen stops, so the text runs on round the corner");
+});
+
+test("the front screen is drawn on the slab, after its top", () => {
+  const svg = renderSvg(sampleData(), { animate: false });
+  assert.ok(svg.indexOf('href="#ledFrontText"') > svg.indexOf('fill="url(#plateFill)"'));
 });
 
 test("handles and repo names on the LED boards are escaped", () => {

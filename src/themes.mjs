@@ -9,8 +9,8 @@ export const themes = {
   // neon green → neon purple → neon pink, and the peak day glows radium yellow.
   aurora: {
     dark: true,
-    bgInner: "#0e0b22",
-    bgMid: "#07061a",
+    bgInner: "#0a0e24",
+    bgMid: "#060a1a",
     bgOuter: "#030308",
     plateTop: "#0d0b20",
     plateEdge: "#3a2b8f",
@@ -21,8 +21,11 @@ export const themes = {
     rule: "#241f4f",
     glow: "#ff10f0",
     cellEdge: "#4b3fb0",
-    nebulaA: "#ff10f0",
-    nebulaB: "#00b7ff",
+    // Deep indigo and blue haze, so the background reads as night sky and
+    // the neon pieces carry the colour.
+    nebulaA: "#3d2bd9",
+    nebulaB: "#0077ff",
+    floorGlow: "#3a3fe0",
     grid: "#2a2470",
     accents: ["#ff10f0", "#39ff14", "#00b7ff", "#e6ff00", "#bc13fe", "#00fff0", "#ff7a00"],
     // Empty days drift through this band across the year.
@@ -45,6 +48,8 @@ export const themes = {
     streak: "#00fff0",
     // Bar tops get an outline in a tint of their own colour, like a neon tube.
     neonEdges: true,
+    // A soft neon glow on the floor under the slab.
+    underglow: 0.38,
     stars: true,
   },
   // Day: clean white with exactly the same neon palette as night mode: neon
@@ -84,6 +89,7 @@ export const themes = {
     streak: "#00c8e0",
     neonFrame: true,
     neonEdges: true,
+    underglow: 0.4,
     stars: false,
   },
 };

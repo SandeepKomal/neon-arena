@@ -6,16 +6,15 @@
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="./preview-light.svg">
-  <img alt="Neon Arena: a neon 3D stadium of a year of GitHub contributions, with an LED ticker of top repositories, a stadium board of stats and a light trail along the longest streak" src="./preview-dark.svg">
+  <img alt="Neon Arena: a neon 3D stadium of a year of GitHub contributions, with an LED ticker of top repositories, a neon underglow and a light trail along the longest streak" src="./preview-dark.svg">
 </picture>
 
-Neon Arena turns your GitHub contribution calendar into a single animated SVG for your profile README. Every day is a lit 3D bar or tile on a solid slab, drawn in a clean parallel 3D view, and every edge of the slab is a glowing neon tube.
+Neon Arena turns your GitHub contribution calendar into a single animated SVG for your profile README. Every day is a lit 3D bar or tile on a solid slab, drawn in a clean parallel 3D view. A single neon loop runs round the slab's top, and a soft neon glow lights the floor beneath it.
 
-- **LED ticker:** the slab's front face is a dot-matrix screen that scrolls your top repositories and their stars.
-- **Stadium board:** an LED board along the back scrolls your headline stats: contributions, active days, longest streak and peak day.
+- **LED ribbon:** a screen wraps round the slab's front and left end and scrolls your top repositories and their stars, round the corner without a break.
 - **Streak light-cycle:** a neon trail rides over the bar tops across your longest streak.
 - **Colour wave:** a wave of neon light rolls across the grid.
-- **Night and day:** `aurora` on near-black and `daylight` on clean white, with the same neon palette.
+- **Night and day:** `aurora` on near-black and `daylight` on clean white, with the same neon palette, neon loop and underglow.
 
 It's one self-contained SVG with no runtime dependencies and no hosted service. Use it as a GitHub Action or as a Node.js CLI.
 
@@ -235,7 +234,7 @@ Options:
 | `src/stats.mjs` | Contribution statistics |
 | `src/geometry.mjs` | 3D camera, prisms and box faces and edges |
 | `src/render.mjs` | Scene composition: terrain, materials, neon edges, cards |
-| `src/arena.mjs` | LED ticker, stadium board and streak light-cycle |
+| `src/arena.mjs` | LED ribbon and streak light-cycle |
 | `src/neon.mjs` | Neon-tube edges and colour helpers |
 | `src/themes.mjs` | Theme colour tokens |
 | `src/sample.mjs` | Deterministic sample data |

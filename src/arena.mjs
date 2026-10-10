@@ -3,40 +3,41 @@
 // - Front LED ticker: the slab's front face is a dot-matrix screen. Text is
 //   drawn in the face's own plane through an affine matrix, so it sits on the
 //   slab in true 3D, and scrolls the top repositories.
-// - Back stadium board: an LED board stands along the back edge, behind the
-//   bars, and scrolls the headline stats.
 // - Streak light-cycle: a neon trail rides over the bar tops across the
 //   longest streak, day by day, and ends in a tag.
 
-import { boxFaces, boxEdges } from "./geometry.mjs";
-import { adjust, mix, tubes } from "./neon.mjs";
+import { adjust, mix } from "./neon.mjs";
 
 const r1 = (n) => Math.round(n * 10) / 10;
-const pts = (list) => list.map((p) => `${r1(p.x)},${r1(p.y)}`).join(" ");
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]));
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// Affine matrix for one short stretch of a board, from local x0..x0+len along
-// the board and 0..height down it. In a parallel view one matrix maps the
-// whole board; under perspective it can't, so boards are drawn as many short
+// Affine matrix for one short stretch of a face, from local x0..x0+len along
+// direction (du, dv) and 0..height down it. In a parallel view one matrix maps
+// a whole face; under perspective it can't, so faces are drawn as many short
 // stretches.
-function stretchMatrix(project, u, v, hTop, len, height) {
+function stretchMatrix(project, u, v, hTop, len, height, du = 1, dv = 0) {
   const o = project(u, v, hTop);
-  const ex = project(u + len, v, hTop);
+  const ex = project(u + du * len, v + dv * len, hTop);
   const ey = project(u, v, hTop - height);
   const m = [(ex.x - o.x) / len, (ex.y - o.y) / len, (ey.x - o.x) / height, (ey.y - o.y) / height, o.x, o.y];
   return `matrix(${m.map((n) => Math.round(n * 1e4) / 1e4).join(" ")})`;
 }
 
 // One scrolling LED board. `items` are [text, colour] pairs; the run repeats
-// so the scroll loops seamlessly. The text is defined once and placed into
-// each stretch with <use>, so splitting the board costs almost nothing.
-function ledBoard({ id, project, u0, length, v, hTop, height, items, t, animate, speed, direction, fontSize }) {
+// so the scroll loops seamlessly. The text is defined once and placed onto
+// each face with <use>, so splitting the board costs almost nothing.
+//
+// With `lead`, the board is a ribbon that wraps round the box's left corner:
+// it starts `lead` units back along the left end face, turns the corner and
+// runs along the front, and the text scrolls round the corner without a break.
+// The bezel then frames only the ribbon's two outer ends.
+function ledBoard({ id, project, u0, length, v, hTop, height, items, t, animate, speed, direction, fontSize, padX = 12, padY = 6, lead = 0 }) {
+  const total = lead + length;
   const charW = fontSize * 0.62 + 2;
   const run = items.map(([s]) => s).join("").length;
   const runW = run * charW;
-  const copies = Math.ceil(length / runW) + 2;
+  const copies = Math.ceil(total / runW) + 2;
   const tspans = Array.from({ length: copies }, () =>
     items.map(([s, c]) => `<tspan fill="${mix(c, "#ffffff", 0.18)}">${esc(s)}</tspan>`).join("")
   ).join("");
@@ -53,20 +54,33 @@ function ledBoard({ id, project, u0, length, v, hTop, height, items, t, animate,
   // laid over the screen rather than a dot mask that breaks the letters up.
   const defs = `<g id="${id}Text"><g>${scroll}<g filter="url(#ledBloom)" opacity=".55">${text}</g>${text}</g></g>`;
 
-  // Panel: the true projected outline, then the text in short stretches.
-  const corners = [project(u0, v, hTop), project(u0 + length, v, hTop), project(u0 + length, v, hTop - height), project(u0, v, hTop - height)];
-  const outline = corners.map((q) => `${r1(q.x)},${r1(q.y)}`).join(" ");
-  const parts = project.perspective ? 16 : 1, seg = length / parts;
-  let stretches = "";
-  for (let k = 0; k < parts; k++) {
-    const x0 = k * seg;
-    stretches += `<clipPath id="${id}C${k}"><rect x="${r1(x0 - 0.4)}" width="${r1(seg + 0.8)}" height="${r1(height)}"/></clipPath>` +
-      `<g transform="${stretchMatrix(project, u0 + x0, v, hTop, seg, height)} translate(${r1(-x0)} 0)" clip-path="url(#${id}C${k})"><use href="#${id}Text"/><rect x="${r1(x0 - 0.4)}" width="${r1(seg + 0.8)}" height="${r1(height)}" fill="url(#ledGrid)"/></g>`;
-  }
-  return {
-    defs,
-    svg: `<polygon points="${outline}" fill="${t.boardBg}"/>${stretches}<polygon points="${outline}" fill="url(#ledGloss)"/>`,
-  };
+  // Faces along the ribbon, in ribbon coordinates (x from 0 to total).
+  const faces = [{ u: u0, v, du: 1, dv: 0, len: length, x0: lead }];
+  if (lead > 0) faces.unshift({ u: u0, v: v - lead, du: 0, dv: 1, len: lead, x0: 0 });
+  const screenFrom = padX, screenTo = total - padX;
+
+  let panels = "", stretches = "", gloss = "";
+  faces.forEach((f, n) => {
+    const at = (x, down) => project(f.u + f.du * x, f.v + f.dv * x, hTop - down);
+    const quad = (a, b, top, bottom) => [at(a, top), at(b, top), at(b, bottom), at(a, bottom)].map((q) => `${r1(q.x)},${r1(q.y)}`).join(" ");
+    const a = Math.max(0, screenFrom - f.x0), b = Math.min(f.len, screenTo - f.x0);
+    panels += `<polygon points="${quad(0, f.len, 0, height)}" fill="${adjust(t.boardBg, 1.16)}"/>` +
+      `<polygon points="${quad(a, b, padY, height - padY)}" fill="${t.boardBg}"/>`;
+    gloss += `<polygon points="${quad(0, f.len, 0, height)}" fill="url(#ledGloss)"/>`;
+    const parts = project.perspective ? 16 : 1, seg = f.len / parts;
+    for (let k = 0; k < parts; k++) {
+      const s0 = k * seg;
+      const lo0 = Math.max(s0, a), hi0 = Math.min(s0 + seg, b);
+      if (hi0 <= lo0) continue;
+      // Neighbouring stretches and faces overlap a hair so no seam shows.
+      const lo = f.x0 + lo0 - (lo0 > a || f.x0 > 0 ? 0.4 : 0), hi = f.x0 + hi0 + (hi0 < b || n < faces.length - 1 ? 0.4 : 0);
+      const clip = `x="${r1(lo)}" y="${r1(padY)}" width="${r1(hi - lo)}" height="${r1(height - 2 * padY)}"`;
+      const cid = `${id}C${n}_${k}`;
+      stretches += `<clipPath id="${cid}"><rect ${clip}/></clipPath>` +
+        `<g transform="${stretchMatrix(project, f.u + f.du * s0, f.v + f.dv * s0, hTop, seg, height, f.du, f.dv)} translate(${r1(-(f.x0 + s0))} 0)" clip-path="url(#${cid})"><use href="#${id}Text"/><rect ${clip} fill="url(#ledGrid)"/></g>`;
+    }
+  });
+  return { defs, svg: panels + stretches + gloss };
 }
 
 // Smooth curve through points (Catmull-Rom converted to cubic Béziers), so
@@ -122,38 +136,9 @@ export function arena({ data, stats, t, project, animate, geo, tops }) {
     : [[" ◆ NEON ARENA ", t.boardInk]];
   const front = ledBoard({
     id: "ledFront", project, u0: U0, length, v: V1, hTop: 0, height: depth,
+    lead: !project.perspective && project.faceVisible(-1, 0, U0, V0) ? V1 - V0 : 0,
     items: [[" TOP REPOS", t.boardInk], ...frontItems], t, animate, speed: 46, direction: -1, fontSize: 26,
   });
-
-  // Back stadium board: headline stats.
-  const peak = stats.peak.date ? (() => { const [, m, d] = stats.peak.date.split("-").map(Number); return `${MONTHS[m - 1] || ""} ${d}`.toUpperCase(); })() : "";
-  const backItems = [
-    [` @${String(data.login || "").toUpperCase()} `, t.glow],
-    ["◆ ", t.boardMute], [`${stats.total.toLocaleString("en-US")} CONTRIBUTIONS `, t.ramp[1]],
-    ["◆ ", t.boardMute], [`${stats.activeDays} ACTIVE DAYS `, t.ramp[2]],
-    ["◆ ", t.boardMute], [`LONGEST STREAK ${stats.longest}D `, t.ramp[3]],
-    ...(peak ? [["◆ ", t.boardMute], [`PEAK ${peak} · ${stats.max} `, t.peak]] : []),
-  ];
-  // The board is a solid box standing flush on the back strip of the plate,
-  // so its ends rise straight up from the plate's edge lines: an LED screen on
-  // its front, a dark casing on its top and ends, neon tubes on its visible
-  // edges, and a soft shadow at its foot. Its bottom edges along the plate's
-  // own edges are left out, so no tube is drawn twice.
-  const backH = 44, backT = 9;
-  const boardBox = { u0: U0, u1: U1, v0: V0, v1: V0 + backT, h0: 0, h1: backH };
-  const back = ledBoard({
-    id: "ledBack", project, u0: boardBox.u0, length: boardBox.u1 - boardBox.u0, v: boardBox.v1, hTop: backH, height: backH,
-    items: backItems, t, animate, speed: 38, direction: 1, fontSize: 24,
-  });
-  const casing = boxFaces(project, boardBox)
-    .filter((f) => f.key !== "front")
-    .map((f) => `<polygon points="${pts(f.pts)}" fill="${adjust(t.boardBg, f.key === "top" ? 1.22 : 1.1)}"/><polygon points="${pts(f.pts)}" fill="url(#ledGloss)"/>`)
-    .join("");
-  const fv = boardBox.v1;
-  const foot = [project(boardBox.u0, fv, 0), project(boardBox.u1, fv, 0), project(boardBox.u1, fv + 3, 0), project(boardBox.u0, fv + 3, 0)];
-  const footShadow = `<polygon points="${pts(foot)}" fill="${t.shadow}" opacity="${t.dark ? ".6" : ".22"}" filter="url(#aoBlur)"/>`;
-  const onPlateEdge = (e) => e.a.h === 0 && e.b.h === 0 && !(e.a.v === boardBox.v1 && e.b.v === boardBox.v1);
-  const backFrame = tubes(boxEdges(project, boardBox).filter((e) => !onPlateEdge(e)), () => t.edgeBack, "boardEdge");
 
   // Streak light-cycle over the bar tops.
   const days = data.weeks.flat();
@@ -193,5 +178,5 @@ export function arena({ data, stats, t, project, animate, geo, tops }) {
   <linearGradient id="ledGloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".1"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient>
   <filter id="ledBloom" x="-5%" y="-40%" width="110%" height="180%"><feGaussianBlur stdDeviation="1.5"/></filter>`;
 
-  return { defs: defs + front.defs + back.defs, back: footShadow + casing + back.svg + backFrame, front: front.svg, trail };
+  return { defs: defs + front.defs, front: front.svg, trail };
 }

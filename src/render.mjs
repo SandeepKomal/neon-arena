@@ -193,8 +193,17 @@ function terrain(data, stats, t, project, animate) {
   // along the front, and the edges that run front to back fade from one to
   // the other through neon purple and blue, so all the tubes meet cleanly at
   // the corners and stay vivid along their length.
-  const rim = tubes(boxEdges(project, slab), (p) => (p.v <= V0 ? t.edgeBack : t.edgeFront), "slabEdge", [t.ramp[3], t.ramp[1]]);
+  // A single neon loop runs round the slab's top edge: pink along the back,
+  // green along the front, and the short ends fade from one to the other
+  // through neon purple and blue, so the loop is unbroken at every corner.
+  const onTop = (e) => e.a.h === 0 && e.b.h === 0;
+  const rim = tubes(boxEdges(project, slab).filter(onTop), (p) => (p.v <= V0 ? t.edgeBack : t.edgeFront), "slabEdge", [t.ramp[3], t.ramp[1]]);
+  // A soft neon reflection on the floor under the slab.
+  const glowFloor = t.underglow
+    ? `<polygon points="${pts([corner(U0 - 30, V0 - 20, -PLATE_DEPTH), corner(U1 + 30, V0 - 20, -PLATE_DEPTH), corner(U1 + 30, V1 + 40, -PLATE_DEPTH), corner(U0 - 30, V1 + 40, -PLATE_DEPTH)])}" fill="url(#underglow)" opacity="${t.underglow}" filter="url(#soft)"/>`
+    : "";
   const plate =
+    glowFloor +
     shadow +
     sides +
     `<polygon points="${pts(top)}" fill="url(#plateFill)" stroke="${t.plateEdge}" stroke-width="1"/>` ;
@@ -343,8 +352,8 @@ export function renderSvg(data, { theme = "aurora", animate = true } = {}) {
 <desc>${esc(desc)}</desc>
 <defs>
   <radialGradient id="bg" cx="62%" cy="58%" r="85%"><stop offset="0" stop-color="${t.bgInner}"/><stop offset=".55" stop-color="${t.bgMid}"/><stop offset="1" stop-color="${t.bgOuter}"/></radialGradient>
-  <radialGradient id="nebA"><stop offset="0" stop-color="${t.nebulaA}" stop-opacity="${t.dark ? 0.28 : 0.6}"/><stop offset="1" stop-color="${t.nebulaA}" stop-opacity="0"/></radialGradient>
-  <radialGradient id="nebB"><stop offset="0" stop-color="${t.nebulaB}" stop-opacity="${t.dark ? 0.22 : 0.55}"/><stop offset="1" stop-color="${t.nebulaB}" stop-opacity="0"/></radialGradient>
+  <radialGradient id="nebA"><stop offset="0" stop-color="${t.nebulaA}" stop-opacity="${t.dark ? 0.2 : 0.6}"/><stop offset="1" stop-color="${t.nebulaA}" stop-opacity="0"/></radialGradient>
+  <radialGradient id="nebB"><stop offset="0" stop-color="${t.nebulaB}" stop-opacity="${t.dark ? 0.16 : 0.55}"/><stop offset="1" stop-color="${t.nebulaB}" stop-opacity="0"/></radialGradient>
   <radialGradient id="gridFade" cx="50%" cy="58%" r="52%"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff" stop-opacity=".5"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
   <mask id="gridMask"><rect width="${W}" height="${H}" fill="url(#gridFade)"/></mask>
   <linearGradient id="glassFill" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="${t.dark ? 0.09 : 1}"/><stop offset="1" stop-color="#fff" stop-opacity="${t.dark ? 0.03 : 0.97}"/></linearGradient>
@@ -354,8 +363,9 @@ export function renderSvg(data, { theme = "aurora", animate = true } = {}) {
   ${stage.defs}
   ${mats}
   <filter id="aoBlur" x="-5%" y="-20%" width="110%" height="140%"><feGaussianBlur stdDeviation="2.4"/></filter>
-  <radialGradient id="floorGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${t.glow}" stop-opacity="${t.dark ? 0.25 : 0.06}"/><stop offset="1" stop-color="${t.glow}" stop-opacity="0"/></radialGradient>
+  <radialGradient id="floorGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${t.floorGlow || t.glow}" stop-opacity="${t.dark ? 0.16 : 0.06}"/><stop offset="1" stop-color="${t.floorGlow || t.glow}" stop-opacity="0"/></radialGradient>
   <filter id="neon" x="-10%" y="-10%" width="120%" height="120%" filterUnits="objectBoundingBox"><feGaussianBlur in="SourceGraphic" stdDeviation="2.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <linearGradient id="underglow" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${t.edgeBack}"/><stop offset=".5" stop-color="${t.ramp[3]}"/><stop offset="1" stop-color="${t.edgeFront}"/></linearGradient>
   <filter id="tubeGlow" x="-5%" y="-5%" width="110%" height="110%"><feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   <filter id="soft" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="12"/></filter>
@@ -368,7 +378,6 @@ ${floorGrid(data, project, t)}
 ${plate}
 ${stage.front}
 ${rim}
-${stage.back}
 ${bars}
 ${stage.trail}
 ${months}
